@@ -2,6 +2,7 @@
 a tool to convert images into pixelart
 
 ![sample pixelart](/test_pixelart.jpg)
+![sample pixelart gif](/test_pixelart_gif.gif)
 
 ### How to use
 * To convert a single image into pixelart, run the pixelart_image.py script
