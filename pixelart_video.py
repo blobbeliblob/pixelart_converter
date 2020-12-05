@@ -14,6 +14,7 @@ fps	# this should be the number of frames per second
 
 from moviepy.editor import VideoFileClip, ImageClip, concatenate_videoclips
 import numpy as np
+import time
 
 #returns color closest to the given color using Euclidean distance
 def pixel_color(pixel, palette):
@@ -27,15 +28,15 @@ def pixel_color(pixel, palette):
 	return closest_color
 
 #converts the given video into pixelart
-def pixelart(vid, size, color_palette_src, fps, fast=True):
-	duration = vid.duration	#duration
+def pixelart(vid, size, color_palette_src, fps, duration, fast=True):
 	number_of_frames = round(vid.fps * vid.duration)
-	number_of_frames = (int(number_of_frames/2000))
+	#number_of_frames = (int(number_of_frames/2000))
 	height, width, rgb = vid.get_frame(0).shape
-	frames = np.empty((number_of_frames, height, width, rgb))
+	frame_step = int(fps)
+	frames = np.empty((int(number_of_frames/frame_step), height, width, rgb))
 	try:
 		print("Accessing frames...")
-		for i in range(number_of_frames):
+		for i in range(0, number_of_frames, frame_step):
 			frames[i] = vid.get_frame(i)
 			print("Progress: " + str(i) + " / " + str(number_of_frames), end="\r")
 		print("Successful!\n")
@@ -144,11 +145,14 @@ def main():
 		return	#end the program
 	#process the frames
 	print("Converting...\n")
-	vid, vid_ok = pixelart(vid, pixel_size, color_palette_src, fps)
+	vid, vid_ok = pixelart(vid, pixel_size, color_palette_src, fps, duration)
 	#vid = vid.set_audio(audio)
 	#save the video
 	if vid_ok:
 		print("Conversion successful!\n")
+		print("\nDoing nothing...")
+		time.sleep(5)
+		print("Continuing...\n")
 		#try:
 		print("Saving video...")
 		new_src = file_name + new_file_appendix + "." + file_format
