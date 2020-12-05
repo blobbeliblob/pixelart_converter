@@ -32,86 +32,100 @@ def pixelart(vid, size, color_palette_src, fps, duration, fast=True):
 	number_of_frames = round(vid.fps * vid.duration)
 	#number_of_frames = (int(number_of_frames/2000))
 	height, width, rgb = vid.get_frame(0).shape
-	frame_step = int(fps)
-	frames = np.empty((int(number_of_frames/frame_step), height, width, rgb))
+	clips = []
+	mew = 100	# memory error workaround
+	for fi in range(int(number_of_frames/mew) if number_of_frames%mew==0 else int(number_of_frames/mew)+1):
+		frame_step = 1#int(fps)
+		frames = np.empty((int(number_of_frames/mew/frame_step), height, width, rgb), dtype=np.uint8)
+		try:
+			print("Accessing frames...")
+			for i in range(fi*mew, fi*mew+mew, frame_step):
+				frames[i] = vid.get_frame(i)
+				print("Progress: " + str(fi*mew+i+1) + " / " + str(number_of_frames), end="\r")
+			print("Successful!\n")
+		except Exception as e:
+			print("Could not access frames!")
+			print("Error: " + str(e) + "\n")
+			print("Video returned without modification.\n")
+			return (vid, False)	#return the image non-modified
+		#get the color palette
+		try:
+			print("Opening palette...")
+			color_file = open(color_palette_src, "r")
+			color_data = color_file.readlines()
+			palette = []
+			for color in color_data:
+				c = color.split(",")
+				palette.append((int(c[0]), int(c[1]), int(c[2])))
+			print("Successful!\n")
+		except Exception as e:
+			print("Failed!")
+			print("Error: " + str(e))
+			print("Video returned without modification.\n")
+			return (vid, False)	#return the image non-modified
+		height, width, rgb = frames[0].shape	#get dimensions
+		try:
+			width_to_remove = width % size
+			height_to_remove = height % size
+			#crop the image to fit the pixel size
+			print("Cropping image...")
+			frames = frames[:, :height-height_to_remove, :width-width_to_remove, :]
+			print("before:\twidth:\t" + str(width) + ", height:\t" + str(height))
+			width, height = len(frames[0][0]), len(frames[0])	#get new dimensions
+			print("after:\twidth:\t" + str(width) + ", height:\t" + str(height))
+			print("Successful!\n")
+		except Exception as e:
+			print("Failed!")
+			print("Error: " + str(e))
+			print("Video returned without modification.\n")
+			return (vid, False)	#return the image non-modified
+		try:
+			print("Processing frames...")
+			height, width, rgb = frames[0].shape
+			edited_frames = np.empty((int(number_of_frames/mew/frame_step), height, width, rgb), dtype=np.uint8)
+			for index in range(len(frames)):
+				frame = frames[index].copy()
+				if not fast:
+					for x in range(width):
+						for y in range(height):
+							frame[y][x] = pixel_color(frame[y][x], palette)
+				for x in range(0, width, size):
+					for y in range(0, height, size):
+						r, g, b = 0, 0, 0
+						for i in range(x, x+size):
+							for j in range(y, y+size):
+								r, g, b = r + frame[j][i][0], g + frame[j][i][1], b + frame[j][i][2]
+						r, g, b = r/(size**2), g/(size**2), b/(size**2)
+						color = pixel_color((r, g, b), palette)
+						for i in range(x, x+size):
+							for j in range(y, y+size):
+								frame[j][i] = color
+				edited_frames[index] = frame
+				print("Progress: " + str(fi*mew+index+1) + " / " + str(number_of_frames), end="\r")
+			print("\nFrames processed!\n")
+		except Exception as e:
+			print("Failed!")
+			print("Error: " + str(e))
+			print("Video returned without modification.\n")
+			return (vid, False)	#return the image non-modified
+		try:
+			print("Concatenating frames...")
+			edited_frames = [ImageClip(frame).set_duration(1/float(fps)) for frame in edited_frames]
+			new_clip = concatenate_videoclips(edited_frames)
+			new_clip.set_duration(duration)
+			print("\nFrames concatenated!\n")
+		except Exception as e:
+			print("Failed!")
+			print("Error: " + str(e))
+			print("Video returned without modification.\n")
+			return (vid, False)	#return the image non-modified
+		clips.append(new_clip)
 	try:
-		print("Accessing frames...")
-		for i in range(0, number_of_frames, frame_step):
-			frames[i] = vid.get_frame(i)
-			print("Progress: " + str(i) + " / " + str(number_of_frames), end="\r")
-		print("Successful!\n")
-	except Exception as e:
-		print("Could not access frames!")
-		print("Error: " + str(e) + "\n")
-		print("Video returned without modification.\n")
-		return (vid, False)	#return the image non-modified
-	#get the color palette
-	try:
-		print("Opening palette...")
-		color_file = open(color_palette_src, "r")
-		color_data = color_file.readlines()
-		palette = []
-		for color in color_data:
-			c = color.split(",")
-			palette.append((int(c[0]), int(c[1]), int(c[2])))
-		print("Successful!\n")
-	except Exception as e:
-		print("Failed!")
-		print("Error: " + str(e))
-		print("Video returned without modification.\n")
-		return (vid, False)	#return the image non-modified
-	height, width, rgb = frames[0].shape	#get dimensions
-	try:
-		width_to_remove = width % size
-		height_to_remove = height % size
-		#crop the image to fit the pixel size
-		print("Cropping image...")
-		frames = frames[:, :height-height_to_remove, :width-width_to_remove, :]
-		print("before:\twidth:\t" + str(width) + ", height:\t" + str(height))
-		width, height = len(frames[0][0]), len(frames[0])	#get new dimensions
-		print("after:\twidth:\t" + str(width) + ", height:\t" + str(height))
-		print("Successful!\n")
-	except Exception as e:
-		print("Failed!")
-		print("Error: " + str(e))
-		print("Video returned without modification.\n")
-		return (vid, False)	#return the image non-modified
-	try:
-		print("Processing frames...")
-		height, width, rgb = frames[0].shape
-		edited_frames = np.empty((number_of_frames, height, width, rgb))
-		for index in range(len(frames)):
-			frame = frames[index].copy()
-			if not fast:
-				for x in range(width):
-					for y in range(height):
-						frame[y][x] = pixel_color(frame[y][x], palette)
-			for x in range(0, width, size):
-				for y in range(0, height, size):
-					r, g, b = 0, 0, 0
-					for i in range(x, x+size):
-						for j in range(y, y+size):
-							r, g, b = r + frame[j][i][0], g + frame[j][i][1], b + frame[j][i][2]
-					r, g, b = r/(size**2), g/(size**2), b/(size**2)
-					color = pixel_color((r, g, b), palette)
-					for i in range(x, x+size):
-						for j in range(y, y+size):
-							frame[j][i] = color
-			edited_frames[index] = frame
-			print("Progress: " + str(index+1) + " / " + str(number_of_frames), end="\r")
-		print("\nFrames processed!\n")
-	except Exception as e:
-		print("Failed!")
-		print("Error: " + str(e))
-		print("Video returned without modification.\n")
-		return (vid, False)	#return the image non-modified
-	try:
-		print("Concatenating frames...")
-		edited_frames = [ImageClip(frame).set_duration(1/float(fps)) for frame in edited_frames]
-		vid = concatenate_videoclips(edited_frames)
+		print("Concatenating clips...")
+		vid = concatenate_videoclips(clips)
 		vid.set_duration(duration)
 		#vid.preview()
-		print("\nFrames concatenated!\n")
+		print("\Clips concatenated!\n")
 	except Exception as e:
 		print("Failed!")
 		print("Error: " + str(e))
@@ -125,7 +139,7 @@ def main():
 	file_format = "mp4"	#format of the video to be converted
 	new_file_appendix = "_pixelart"	#added to the name of the new file, leave as empty string if source file should be replaced
 	src = file_name + "." + file_format
-	pixel_size = 8	#how many pixels wide and high should a "pixel" be in the new image
+	pixel_size = 64	#how many pixels wide and high should a "pixel" be in the new image
 	color_palette_src = "palette_8"	#name of the file containing color palette, each color should be on a new line, rgb values should be comma separated, no whitespace
 	fps = "default"	#frames per second of the pixelart video, set to "default" for the same as the source video
 	fps = 1
