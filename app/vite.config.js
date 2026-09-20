@@ -6,7 +6,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/pixelart_converter/',
+  // Relative URLs work on both the repository Pages URL and the custom domain.
+  base: './',
   plugins: [
     vue(),
     vueDevTools(),
