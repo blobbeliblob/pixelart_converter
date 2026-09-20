@@ -104,6 +104,19 @@ const isConverting = computed(() => status.value === 'converting')
 const hasImage = computed(() => Boolean(sourceImage.value))
 const isDark = computed(() => theme.value === 'dark')
 
+const backdropStyle = computed(() => {
+  const backdrop = isDark.value
+    ? 'assets/akihabara_night_pixelart.png'
+    : 'assets/akihabara_day_pixelart.png'
+  const overlay = isDark.value
+    ? 'linear-gradient(rgba(9, 10, 16, 0.73), rgba(9, 10, 16, 0.82))'
+    : 'linear-gradient(rgba(247, 246, 242, 0.73), rgba(247, 246, 242, 0.82))'
+
+  return {
+    backgroundImage: `${overlay}, url("${assetUrl(backdrop)}")`,
+  }
+})
+
 const croppedDimensions = computed(() => {
   const dimensions = sourceDimensions.value
   const size = Number(pixelSize.value)
@@ -153,6 +166,10 @@ function formatDimensions(dimensions) {
 
 function colorValue(color) {
   return `rgb(${color.join(', ')})`
+}
+
+function assetUrl(path) {
+  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
 }
 
 function openFilePicker() {
@@ -373,7 +390,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell" :class="`theme-${theme}`">
+  <div class="app-shell" :class="`theme-${theme}`" :style="backdropStyle">
     <main class="page-content">
       <section class="hero">
         <button
@@ -561,7 +578,7 @@ onBeforeUnmount(() => {
           rel="noopener noreferrer"
           aria-label="Pixel Art Converter on GitHub"
         >
-          <img src="/favicon.png" alt="GitHub" />
+          <img :src="assetUrl('/favicon.png')" alt="GitHub" />
         </a>
       </footer>
     </main>
@@ -644,13 +661,10 @@ input:focus-visible,
   --button: #ffffff;
   --button-text: #111111;
   background-color: #111111;
-  background-image: linear-gradient(rgba(9, 10, 16, 0.73), rgba(9, 10, 16, 0.82)),
-    url('/assets/akihabara_night_pixelart.png');
 }
 
 .app-shell.theme-light {
-  background-image: linear-gradient(rgba(247, 246, 242, 0.73), rgba(247, 246, 242, 0.82)),
-    url('/assets/akihabara_day_pixelart.png');
+  background-color: #f3f1ed;
 }
 
 .app-shell * {
